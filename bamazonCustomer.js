@@ -1,7 +1,6 @@
 var mysql = require("mysql");
-
 var inquirer = require("inquirer");
-
+const cTable = require('console.table');
 var connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
@@ -10,6 +9,7 @@ var connection = mysql.createConnection({
     database: "bamazon"
 });
 
+var chosenItem = [];
 
 
 
@@ -23,10 +23,11 @@ connection.connect(function (err) {
 function listProducts() {
     connection.query("SELECT * FROM products", function (err, res) {
         var inventory = [];
+
         for (var i = 0; i < res.length; i++) {
-            inventory.push(res[i].item_id + " | " + res[i].product_name + " | " + res[i].department_name + " | " + res[i].price + " | " + res[i].stock_quantity);
+            inventory.push(res[i]);
         }
-        console.log(inventory);
+        console.table(inventory);
         shopping();
     });
 
@@ -48,7 +49,7 @@ function shopping() {
             connection.query("SELECT * FROM products WHERE ?", {
                 item_id: answer.shop
             }, function (err, res) {
-                var chosenItem = []
+
                 chosenItem.push(
                     "Product: " +
                     res[0].product_name +
@@ -59,27 +60,28 @@ function shopping() {
                     " || In-Stock: " +
                     res[0].stock_quantity
                 );
-                console.log("You have chosen to buy " + answer.count + " " + res[0].product_name + " from the " + res[0].department_name + " department at a price of " + res[0].price + " each");
 
-                var total = answer.count * res[0].price;
+                console.log("You have chosen to buy " + answer.count + " " + res[0].product_name + " from the " + res[0].department_name + " department at a price of $" + res[0].price + " each");
+
+                var total = parseFloat(answer.count * res[0].price).toFixed(2);
                 if (answer.count > res[0].stock_quantity) {
                     console.log("Sorry, we don't have enough " + res[0].product_name + " in stock. We only have " + res[0].stock_quantity + " available.")
                     keepShopping();
                 } else {
-                    console.log("You purchased " + answer.count + " " + res[0].product_name + "! Your total today is " + total + ".")
+                    console.log("You purchased " + answer.count + " " + res[0].product_name + "! Your total today is $" + total + ".")
                     var newCount = res[0].stock_quantity - answer.count;
-                    // connection.query(
-                    //     "UPDATE products SET ? WHERE ?",
-                    //     [
-                    //       {
-                    //         stock_quantity: newCount
-                    //       },
-                    //       {
-                    //         id: chosenItem.id
-                    //       }
-                    //     ],
-                    //     console.log(res[0].stock_quantity)
-                    //   );
+                    var product = res[0].product_name;
+                    connection.query(
+                        "UPDATE products SET ? WHERE ?",
+                        [{
+                                stock_quantity: newCount
+                            },
+                            {
+                                product_name: product
+                            }
+                        ],
+
+                    );
                     keepShopping();
                 }
             })
