@@ -24,20 +24,22 @@ function commands() {
             type: "list",
             name: "command",
             message: "What would you like to do?",
-            choices: ["View Products for Sale", "View Low Inventory", "Add to Inventory", "Add New Item"]
+            choices: ["View Products for Sale", "View Low Inventory", "Change Inventory", "Add New Item", "Exit the Managment Portal"]
         }])
         .then(function (answer) {
             if (answer.command === "View Products for Sale") {
                 listProducts();
             } else if (answer.command === "View Low Inventory") {
                 lowInventory();
-            } else if (answer.command === "Add to Inventory") {
+            } else if (answer.command === "Change Inventory") {
                 addInventory();
-            } else {
+            } else if (answer.command === "Add New Item") {
                 newItem();
+            } else {
+                process.exit();
             }
         })
-}
+};
 
 function listProducts() {
     connection.query("SELECT * FROM products", function (err, res) {
@@ -72,60 +74,35 @@ function lowInventory() {
 
 function addInventory() {
     inquirer.prompt([{
-        type: "input",
-        name: "shop",
-        message: "Welcome to Bamazon! What item number you like to buy?"
-    },
-    {
-        type: "input",
-        name: "count",
-        message: "How many would you like to buy?"
-    },
-])
-.then(function (answer) {
-    connection.query("SELECT * FROM products WHERE ?", {
-        item_id: answer.shop
-    }, function (err, res) {
+                type: "input",
+                name: "add",
+                message: "What item number you like to add stock for?"
+            },
+            {
+                type: "input",
+                name: "newStock",
+                message: "What would you like to set the total stock to?"
+            },
+        ])
+        .then(function (answer) {
+                connection.query(
+                    "UPDATE products SET ? WHERE ?",
+                    [{
+                            stock_quantity: answer.newStock
+                        },
+                        {
+                            item_id: answer.add
+                        }
+                    ],
 
-        chosenItem.push(
-            "Product: " +
-            res[0].product_name +
-            " || Department: " +
-            res[0].department_name +
-            " || Price: " +
-            res[0].price +
-            " || In-Stock: " +
-            res[0].stock_quantity
-        );
+                );
+                commands();
+            })
+        };
 
-        console.log("You have chosen to buy " + answer.count + " " + res[0].product_name + " from the " + res[0].department_name + " department at a price of $" + res[0].price + " each");
 
-        var total = parseFloat(answer.count * res[0].price).toFixed(2);
-        if (answer.count > res[0].stock_quantity) {
-            console.log("Sorry, we don't have enough " + res[0].product_name + " in stock. We only have " + res[0].stock_quantity + " available.")
-            keepShopping();
-        } else {
-            console.log("You purchased " + answer.count + " " + res[0].product_name + "! Your total today is $" + total + ".")
-            var newCount = res[0].stock_quantity - answer.count;
-            var product = res[0].product_name;
-            connection.query(
-                "UPDATE products SET ? WHERE ?",
-                [{
-                        stock_quantity: newCount
-                    },
-                    {
-                        product_name: product
-                    }
-                ],
 
-            );
-            keepShopping();
-        }
-    })
 
-})
-commands();
-};
 
 function newItem() {
     inquirer
@@ -153,7 +130,7 @@ function newItem() {
             {
                 name: "stock",
                 type: "input",
-                message: "Ho many are in stock?",
+                message: "How many are in stock?",
                 validate: function (value) {
                     if (isNaN(value) === false) {
                         return true;
